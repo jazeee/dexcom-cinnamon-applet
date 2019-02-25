@@ -334,7 +334,7 @@ MyApplet.prototype = {
       vertical: true,
       style_class: STYLE_SUMMARYBOX
     })
-    let textOb = { text: dexcom.glucoseValue || ELLIPSIS }
+    let textOb = { text: "" + (dexcom.glucoseValue) || ELLIPSIS }
     this._currentUiTemperature = new St.Label(textOb)
     let rb = new St.BoxLayout({
       style_class: STYLE_DATABOX
@@ -429,14 +429,14 @@ MyApplet.prototype = {
   },
 
   getAuthToken: function getAuthToken(callback) {
+    let context = this;
     const now = Date.now();
     if ( now - LAST_SESSION_ID_REQUEST_DATE < 30 * 60 * 1000) {
       log("Using cached session ID");
-      callback(SESSION_ID);
+      callback.call(context, SESSION_ID);
       return;
     }
     LAST_SESSION_ID_REQUEST_DATE = now;
-    let context = this;
     let query = QUERY_URL + "/General/LoginPublisherAccountByName";
     const accountName = this._accountName;
     log("account: " + accountName);
@@ -466,13 +466,14 @@ MyApplet.prototype = {
 
   getDexcomReading: function getDexcomReading() {
     this.getAuthToken(function(sessionId) {
-      if (!sessionId) {
+      if (!sessionId || sessionId === "") {
         logError("Unable to auth");
         return false;
       }
       let query = QUERY_URL + "/Publisher/ReadPublisherLatestGlucoseValues?";
-      query += "sessionId=" + sessionId + "&minutes=1440&maxCount=1";
       log(query);
+      log("sessionIdLength: " + sessionId.length);
+      query += "sessionId=" + sessionId + "&minutes=1440&maxCount=1";
       this.loadJsonAsync(query, null, Lang.bind(this, function(data) {
         log("Response: " + data);
         if (!data) {
