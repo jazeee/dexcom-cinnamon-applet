@@ -202,7 +202,7 @@ MyApplet.prototype = {
     //------------------------------
     // run
     //------------------------------
-    this.refreshAfterAFew()
+    this.refreshAfterAFew(true)
     this.orientation = orientation;
     log("Orientation: " + orientation);
     try {
@@ -214,10 +214,10 @@ MyApplet.prototype = {
     }
     log("Done _init");
   },
-  refreshAfterAFew: function refreshAfterAFew() {
+  refreshAfterAFew: function refreshAfterAFew(recurse) {
     Mainloop.timeout_add_seconds(3, Lang.bind(this, function mainloopTimeout() {
       log("Refreshing Dexcom");
-      this.refreshDexcom(true)
+      this.refreshDexcom(recurse)
     }));
   },
   update_label_visible: function () {
@@ -431,6 +431,7 @@ MyApplet.prototype = {
   getAuthToken: function getAuthToken(callback) {
     const now = Date.now();
     if ( now - LAST_SESSION_ID_REQUEST_DATE < 30 * 60 * 1000) {
+      log("Using cached session ID");
       callback(SESSION_ID);
       return;
     }
@@ -441,17 +442,22 @@ MyApplet.prototype = {
     log("account: " + accountName);
     let password = this.readFile(this._passwordFilename);
     log("pa" + password[1]);
-    if (!accountName || !password) {
+    if (!accountName || !password || password === "") {
       logError("Need Creds");
       return;
     }
     const body = {
       applicationId:"d8665ade-9673-4e27-9ff6-92db4ce13d13",
-      accountName: accountName,
+      accountName: accountName.trim(),
       password: password.toString().trim(),
     };
     this.loadJsonAsync(query, body, function(sessionId) {
-      SESSION_ID = JSON.parse(sessionId);
+      try {
+        SESSION_ID = JSON.parse(sessionId);
+      } catch (error) {
+        logError(error);
+        return;
+      }
       callback.call(context, SESSION_ID);
     });
   },
@@ -467,29 +473,30 @@ MyApplet.prototype = {
       let query = QUERY_URL + "/Publisher/ReadPublisherLatestGlucoseValues?";
       query += "sessionId=" + sessionId + "&minutes=1440&maxCount=1";
       log(query);
-      this.loadJsonAsync(query, null, function(data) {
+      this.loadJsonAsync(query, null, Lang.bind(this, function(data) {
         log("Response: " + data);
-        const json = JSON.parse(data);
-        if (!this.isResponseValid(json)) {
+        if (!data) {
+          this.displayLabelError("Service Unavailable");
+          logError("Service Unavailable");
           Mainloop.timeout_add_seconds(30, Lang.bind(this, function() {
             this.refreshDexcom(false)
           }));
           return false;
         }
-        this.parseDexcomJson(json);
-        this.displayGlucose();
-        return true;
-      });
+        log("HERE");
+        try {
+          const json = JSON.parse(data);
+          this.parseDexcomJson(json);
+          log("HERE3");
+          this.displayGlucose();
+          log("HERE4");
+          return true;
+        } catch (error) {
+          logError(error);
+          return;
+        }
+      }));
     });
-  },
-
-  isResponseValid: function(response) {
-    if (!response) {
-      this.displayLabelError(_("Service Unavailable"));
-      logError("Service Unavailable");
-      return false;
-    }
-    return true;
   },
 
   parseDexcomJson: function(json) {
@@ -497,11 +504,15 @@ MyApplet.prototype = {
       logError("No json values: " + json);
       return;
     }
-    const data = json[0];
-    dexcom.glucoseValue = data.Value;
-    dexcom.date = data.DT;
-    dexcom.trend = data.Trend;
-    log("Values: " + JSON.stringify(dexcom));
+    try {
+      const data = json[0];
+      dexcom.glucoseValue = data.Value;
+      dexcom.date = data.DT;
+      dexcom.trend = data.Trend;
+      log("Values: " + JSON.stringify(dexcom));
+    } catch (error) {
+      logError(error);
+    }
   },
 };
 
