@@ -23,3 +23,7 @@ or if your settings are invalid:
 ```
 Needs Creds...
 ```
+
+## Info:
+https://gist.github.com/jazeee/fd96ffd2d334d70a6ddf7bb536d6c716
+
