@@ -1,0 +1,30 @@
+{
+  "head":
+  { "type": "header"
+    , "description": "Settings for dexcom@jazeee"
+  },
+  "providerSettings":
+  { "type": "header"
+  , "description": "Dexcom Glucose Provider Settings"
+  },
+  "accountName": {
+    "default": "jazeee",
+    "type": "entry",
+    "description": "Dexcom Account Name (not email)",
+    "tooltip": "Not email. Just account name."
+  },
+  "passwordFilename": {
+    "default": "",
+    "type": "filechooser",
+    "description": "File containing password."
+  },
+  "refreshInterval":
+  { "type": "spinbutton"
+  , "default": 5
+  , "min": 5
+  , "max": 30
+  , "units": "minutes"
+  , "step": 1
+  , "description": "Update interval"
+  }
+}
